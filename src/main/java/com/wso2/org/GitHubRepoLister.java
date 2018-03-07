@@ -21,11 +21,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import com.wso2.org.Models.Component;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -33,23 +29,30 @@ import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * TODO: Class level comment.
  */
-public class GitHubRepoListor {
+public class GitHubRepoLister {
 
-    private static Logger logger = LoggerFactory.getLogger(GitHubRepoListor.class);
+    private static Logger logger = LoggerFactory.getLogger(GitHubRepoLister.class);
+
     //Done with pagination using split
-    public static Map<String, String> splitLinkHeader(String header){
+    public static Map<String, String> splitLinkHeader(String header) {
+
         String[] parts = header.split(",");
-        Map <String, String> map = new HashMap<String, String>();
-        for(int i = 0; i < parts.length; i++){
+        Map<String, String> map = new HashMap<String, String>();
+        for (int i = 0; i < parts.length; i++) {
             String[] sections = parts[i].split(";");
             String PaginationUrl = sections[0].replaceFirst("<(.*)>", "$1");
-            String urlPagChange =  PaginationUrl.trim();
+            String urlPagChange = PaginationUrl.trim();
             String name = sections[1].substring(6, sections[1].length() - 1);
             map.put(name, urlPagChange);
         }
@@ -57,25 +60,18 @@ public class GitHubRepoListor {
         return map;
     }
 
-    public void getGitHubRepos(String orgName) throws SQLException, IOException {
-        String baseURL = "https://api.github.com";
+    public static ArrayList<Component> getGitHubRepos(String orgName,int orgId) throws IOException {
 
-        String initialUrl = "https://api.github.com/orgs/"+orgName+"/repos";
-        ReadConfigureFile credentials= new ReadConfigureFile();
+
+        ArrayList<Component> components = new ArrayList<>();
+        String initialUrl = Contstants.BASE_URL + "/"+"orgs"+"/" + orgName + "/"+"repos";
+        ReadConfigureFile credentials = new ReadConfigureFile();
 
         try {
-
-
 
             CloseableHttpClient httpClient = HttpClientBuilder.create().build();
             HttpGet initialUrlRequest = new HttpGet(initialUrl);
 
-            /**
-             * @param InitialUrlRequest
-             *            GET /orgs/:org/repos
-             *
-             *
-             */
             initialUrlRequest.addHeader("content-type", "application/json");
             initialUrlRequest.addHeader("Authorization", "Bearer "
                     + credentials.getTokenKey());
@@ -89,25 +85,15 @@ public class GitHubRepoListor {
             JsonElement reposJsonElement = new JsonParser().parse(repoJson);
             JsonArray reposJsonArray = reposJsonElement.getAsJsonArray();
 
-            /**
-             * @param RepolJsonArray
-             *            Used to get all repositories contents as a Json array
-             *
-             */
-
             boolean containsNext = true;
             while (containsNext) {
 
                 if (responseOfReq.containsHeader("Link")) {
-
                     Header[] linkHeader = responseOfReq.getHeaders("Link");
                     Map<String, String> linkMap = splitLinkHeader(linkHeader[0]
                             .getValue());
-
                     HttpClientUtils.closeQuietly(responseOfReq);
-
                     logger.info(linkMap.get("next"));
-
                     try {
                         HttpGet requestForNext = new HttpGet(
                                 linkMap.get("next"));
@@ -123,16 +109,11 @@ public class GitHubRepoListor {
                                 .parse(repoJsonNext);
                         JsonArray jarrNext = jelementNext.getAsJsonArray();
                         reposJsonArray.addAll(jarrNext);
-
                         HttpClientUtils.closeQuietly(responseOfReq);
-
-                        System.out.println((jarrNext));
 
                     } catch (Exception e) {
                         containsNext = false;
                     }
-
-
 
                 } else {
                     containsNext = false;
@@ -140,44 +121,25 @@ public class GitHubRepoListor {
 
             }
 
-
-            for (int i = 0; i < reposJsonArray.size(); i++) {
-                JsonObject repos = (JsonObject) reposJsonArray.get(i);
+            for (int index = 0; index < reposJsonArray.size(); index++) {
+                JsonObject repos = (JsonObject) reposJsonArray.get(index);
 
                 String repoName = repos.get("name").toString();
-                // repoName returns all repositories names of wso2 in github
-
                 repoName = repoName.substring(1, repoName.length() - 1);
-                //logger.info("Name of the repository   :" + repoName);
 
                 String repoURL = repos.get("html_url").toString();
-                // repoUrl returns all repositories url of wso2 in GitHub
-
                 repoURL = repoURL.substring(1, repoURL.length() - 1);
-                //logger.info("Repository URL   :" + repoURL);
 
-                //ProductComponentMapListUpdator.updateComponent(repoName,repoURL);
+                Component component = new Component(repoName, repoURL,orgId);
+                components.add(component);
 
-                ArrayList<String> githubReposListor=new ArrayList<String>();
-                githubReposListor.add(repoName);
-                githubReposListor.add(repoURL);
-
-                for (int y = 0; y <githubReposListor.size(); y++) {
-                    String githubRepoList = githubReposListor.get(y);
-                    System.out.println(githubRepoList);
-                }
             }
-
-
-
-        }
-
-        catch (IOException ex) {
+        } catch (IOException ex) {
             logger.info(ex.getStackTrace().toString());
         }
+        return components;
 
     }
-
 
 }
 

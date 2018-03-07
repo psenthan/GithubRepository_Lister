@@ -17,52 +17,24 @@
  */
 package com.wso2.org;
 
-
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Properties;
 
 public class ReadConfigureFile {
-    protected Properties prop= null;
-    protected InputStream input= getClass().getResourceAsStream("/config.properties");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(input));
 
-    public ReadConfigureFile() throws IOException{
+    protected Properties prop;
+    protected InputStream input = getClass().getResourceAsStream("/config.properties");
 
-        prop= new Properties();
+    public ReadConfigureFile() throws IOException {
+
+        prop = new Properties();
         prop.load(input);
     }
 
+    public String getTokenKey() {
 
-    public String getTokenKey(){
         return prop.getProperty("tokenKey");
     }
-    public String getDatabaseConn()
-    {
-        return prop.getProperty("databaseUrl");
-    }
-    public String getUser()
-    {
-        return prop.getProperty("user");
-    }
-    public String getPassword()
-    {
-        return prop.getProperty("password");
-    }
-
-    public String getJenkinsDb(){
-        return prop.getProperty("jenkinsDbUrl");
-    }
-    public String getJenkinsUserName()
-    {
-        return prop.getProperty("userNameJenkins");
-    }
-    public String getJenkinsPassword()
-    {
-        return prop.getProperty("PasswordJenkins");
-    }
-
 
 }
